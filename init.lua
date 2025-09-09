@@ -18,17 +18,28 @@ vim.filetype.add({
 	},
 })
 
--- Leader key ( space )
+-- init.lua
+
+-- Set leader key
 vim.g.mapleader = " "
 
+-- Core configs (options, mappings, autocommands)
 require("core.options").config()
 require("core.mappings").config()
 require("core.autocommands").config()
+
+-- Lazy.nvim setup
 require("lazy").setup({
+	-- Example single plugins
 	"michaeljsmith/vim-indent-object",
 	{
 		"windwp/nvim-autopairs",
 		config = true,
 	},
-	{ import = "plugins" },
+
+	-- Import your plugin specs folder
+	{ import = "plugins" }, -- this will load plugins/*.lua
+
+	-- Our full dev environment for 2025 Vue/Next.js
+	{ import = "plugins.dev_env" }, -- loads plugins/dev_env.lua
 })
