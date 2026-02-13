@@ -78,18 +78,17 @@ return {
 		end,
 	},
 
-	-- === LSP + typescript.nvim ===
+	-- === LSP + typescript-tools.nvim ===
 	{
 		"neovim/nvim-lspconfig",
 		lazy = false,
 		dependencies = {
-			"jose-elias-alvarez/typescript.nvim",
+			"pmizio/typescript-tools.nvim",
+			"nvim-lua/plenary.nvim",
 			"nvimtools/none-ls.nvim",
 			"nvimtools/none-ls-extras.nvim",
 		},
 		config = function()
-			local lspconfig = require("lspconfig")
-			local typescript = require("typescript")
 			local null_ls = require("null-ls")
 
 			-- Diagnostics config
@@ -100,37 +99,77 @@ return {
 				update_in_insert = false,
 			})
 
-			-- Volar for Vue
-			lspconfig.volar.setup({
+			-- Volar for Vue (new vim.lsp API)
+			vim.lsp.config("volar", {
 				filetypes = { "vue" },
 				init_options = {
 					typescript = { tsdk = "/usr/local/lib/node_modules/typescript/lib" },
 				},
 			})
+			vim.lsp.enable("volar")
 
-			-- TypeScript / Next.js
-			typescript.setup({
-				server = {
-					filetypes = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
-					root_dir = lspconfig.util.root_pattern("package.json", "tsconfig.json", "jsconfig.json", ".git"),
-					on_attach = function(client, bufnr)
-						client.server_capabilities.documentFormattingProvider = false
-					end,
+			-- TypeScript / Next.js / React (using typescript-tools.nvim)
+			require("typescript-tools").setup({
+				filetypes = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
+				settings = {
+					tsserver_file_preferences = {
+						includeInlayParameterNameHints = "all",
+						includeInlayFunctionParameterTypeHints = true,
+						includeInlayVariableTypeHints = true,
+						includeInlayPropertyDeclarationTypeHints = true,
+					},
+					complete_function_calls = true,
 				},
+				on_attach = function(client, bufnr)
+					client.server_capabilities.documentFormattingProvider = false
+					-- Keymaps for TypeScript specific actions
+					local opts = { buffer = bufnr, silent = true }
+					vim.keymap.set("n", "<leader>oi", ":TSToolsOrganizeImports<CR>", opts)
+					vim.keymap.set("n", "<leader>ru", ":TSToolsRemoveUnused<CR>", opts)
+					vim.keymap.set("n", "<leader>am", ":TSToolsAddMissingImports<CR>", opts)
+				end,
 			})
 
-			-- none-ls setup
+			-- ESLint LSP for Next.js/React linting (new vim.lsp API)
+			vim.lsp.config("eslint", {
+				filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
+				settings = {
+					workingDirectories = { mode = "auto" },
+				},
+				on_attach = function(client, bufnr)
+					vim.api.nvim_create_autocmd("BufWritePre", {
+						buffer = bufnr,
+						command = "EslintFixAll",
+					})
+				end,
+			})
+			vim.lsp.enable("eslint")
+
+			-- Go (gopls) (new vim.lsp API)
+			vim.lsp.config("gopls", {
+				settings = {
+					gopls = {
+						gofumpt = true,
+						analyses = {
+							unusedparams = true,
+							unusedwrite = true,
+							fieldalignment = true,
+						},
+						staticcheck = true,
+					},
+				},
+			})
+			vim.lsp.enable("gopls")
+
+			-- none-ls setup (only for formatters not handled by conform.nvim)
 			null_ls.setup({
 				sources = {
-					null_ls.builtins.formatting.prettier,
-					null_ls.builtins.formatting.stylua,
 					null_ls.builtins.formatting.sql_formatter,
-					null_ls.builtins.diagnostics.eslint_d,
 				},
 				on_attach = function(client, bufnr)
 					local opts = { buffer = bufnr, silent = true }
 
-					-- Manual formatting
+					-- Manual formatting (for SQL files via none-ls)
 					vim.keymap.set("n", ",f", function()
 						vim.lsp.buf.format({ async = true })
 					end, opts)
@@ -140,16 +179,6 @@ return {
 
 					-- Diagnostics float
 					vim.keymap.set("n", "<leader>de", vim.diagnostic.open_float, opts)
-
-					-- Auto-format on save
-					if client.supports_method("textDocument/formatting") then
-						vim.api.nvim_create_autocmd("BufWritePre", {
-							buffer = bufnr,
-							callback = function()
-								vim.lsp.buf.format({ async = false })
-							end,
-						})
-					end
 				end,
 			})
 		end,
