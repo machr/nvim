@@ -12,11 +12,6 @@ M.config = function()
       autocmd BufEnter * if &buftype == 'help' && winwidth(0) == &columns | wincmd L | endif
     augroup END
 
-    augroup _go
-      autocmd!
-      autocmd BufWritePre *.go lua vim.lsp.buf.format()
-    augroup END
-
     augroup _init_on_file_open
       autocmd!
       " Change the working directory on initial open, handling both files and directories
@@ -24,6 +19,24 @@ M.config = function()
     augroup END
 
   ]])
+
+  local go_group = vim.api.nvim_create_augroup("_go", { clear = true })
+  vim.api.nvim_create_autocmd("BufWritePre", {
+    group = go_group,
+    pattern = "*.go",
+    callback = function(args)
+      local ok, conform = pcall(require, "conform")
+      if ok then
+        conform.format({ bufnr = args.buf, async = false, lsp_fallback = true })
+        return
+      end
+
+      local clients = vim.lsp.get_active_clients({ bufnr = args.buf })
+      if #clients > 0 then
+        vim.lsp.buf.format({ bufnr = args.buf, async = false })
+      end
+    end,
+  })
   -- Notes: _help
   -- When opening the help buffer, upon open, set the buffer to the right most vertical split.
   -- The winwidth() check is to determine whether a help buffer is already open, if so, do not issue the wincmd.

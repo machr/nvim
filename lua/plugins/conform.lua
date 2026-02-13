@@ -15,11 +15,12 @@ return {
 				html = { "prettier" },
 				css = { "prettier" },
 			},
-			format_on_save = {
-				-- I recommend these options. See :help conform.format for details.
-				lsp_format = true,
-				timeout_ms = 500,
-			},
+			format_on_save = function()
+				return {
+					lsp_fallback = true,
+					timeout_ms = 500,
+				}
+			end,
 		})
 		vim.keymap.set({ "n", "v" }, ",-f", function()
 			conform.format({

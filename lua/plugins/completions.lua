@@ -3,6 +3,9 @@ return {
 		"hrsh7th/cmp-nvim-lsp",
 	},
 	{
+		"hrsh7th/cmp-path",
+	},
+	{
 		"L3MON4D3/LuaSnip",
 		dependencies = {
 			"saadparwaiz1/cmp_luasnip",
@@ -33,20 +36,14 @@ return {
 					["<CR>"] = cmp.mapping.confirm({ select = true }),
 				}),
 				sources = cmp.config.sources({
-					{ name = "nvim_lsp" },
-          {  name = "copilot" }, -- For copilot users. 
-					{ name = "luasnip" }, -- For luasnip users.
+					{ name = "copilot", group_index = 1, priority = 100 },
+					{ name = "nvim_lsp", group_index = 1, priority = 90 },
+					{ name = "luasnip", group_index = 2 },
 				}, {
 					{ name = "buffer" },
+					{ name = "path" },
 				}),
 			})
-		end,
-	},
-	{
-		"windwp/nvim-ts-autotag",
-		cond = vim.g.not_in_vscode,
-		config = function()
-			require("nvim-ts-autotag").setup()
 		end,
 	},
 	{
